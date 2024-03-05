@@ -1,0 +1,71 @@
+# Navigate to the /obj context
+obj_context = hou.node('/obj')
+
+# Create a new geometry container node
+geo_node = obj_context.createNode('geo', 'GeneratedGeometry')
+
+# Create a Python SOP node within the geometry container
+python_sop = geo_node.createNode('python', 'CreateCochleoidHelix')
+
+# Python code to generate a shape that extends the cochleoid into three dimensions
+python_code = """
+import hou
+import numpy as np
+
+# Access the geometry of the Python SOP node
+geo = hou.pwd().geometry()
+geo.clear()  # Clear existing geometry
+
+
+frame = hou.frame()
+
+# Parameters for the Cochleoid
+theta_max = ((frame+1)/31.25) * np.pi  # Maximum value of theta
+a = 0.51 + (frame - 1) / (250 - 1) * (2 - 0.51)
+
+# Define the parametric domain
+theta = np.linspace(0.001, theta_max, 400)  # Avoid division by zero at theta = 0
+phi = np.linspace(0, 2 * np.pi, 100)  # Angle to revolve the curve around the z-axis
+
+# Create the 3D mesh grid
+Theta, Phi = np.meshgrid(theta, phi)
+
+# Cochleoid formula applied in 3D
+R = a * np.sin(Theta) / Theta
+X = R * np.cos(Theta)
+Y = R * np.sin(Theta)
+Z = (X*Y) * np.cos(Phi)
+
+# Iterate over the arrays to create points
+points = []
+for xi, yi, zi in zip(X.flatten(), Y.flatten(), Z.flatten()):
+    point = geo.createPoint()
+    point.setPosition((xi, yi, zi))
+    points.append(point)
+
+# Use the points to create polygons
+u_size = len(theta)
+v_size = len(phi)
+
+for i in range(v_size - 1):
+    for j in range(u_size-1):
+        # Create a polygon for each quad, making sure to loop back to the start on the phi direction
+        pt1 = points[i * u_size + j]
+        pt2 = points[i * u_size + (j + 1) % u_size]
+        pt3 = points[(i + 1) * u_size + (j + 1) % u_size]
+        pt4 = points[(i + 1) * u_size + j]
+
+        # Make sure to define the points in a counter-clockwise order to ensure the normals face outward
+        poly = geo.createPolygon()
+        poly.addVertex(pt1)
+        poly.addVertex(pt2)
+        poly.addVertex(pt3)
+        poly.addVertex(pt4)
+
+"""
+
+# Set the Python SOP's script parameter to the python_code
+python_sop.parm('python').set(python_code)
+
+# Layout nodes for a cleaner look
+geo_node.layoutChildren()
