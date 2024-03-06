@@ -5,7 +5,7 @@ obj_context = hou.node('/obj')
 geo_node = obj_context.createNode('geo', 'GeneratedGeometry')
 
 # Create a Python SOP node within the geometry container
-python_sop = geo_node.createNode('python', 'Structured_Topological_Mappings_of_Invariant_Grids')
+python_sop = geo_node.createNode('python', 'Parametric_Surface_Generation_Nested_Lattice_Transforms')
 
 python_code = """
 import hou
@@ -49,7 +49,7 @@ def create_surface(coefficients, megacoefficients, geo, t):
                 y = (b + np.cos(x*V - U)) *(b + np.sin(V))
                 z = x*y * np.sin(x-y)
 
-                # Create a local coordinate system for each mega grid cell
+                # Create a local coordinate system for each mega-grid cell
                 local_coords = np.stack((x, y, z), axis=-1)
 
                 # Apply a rotation matrix to the local coordinates
